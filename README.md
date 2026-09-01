@@ -27,7 +27,6 @@ This repository contains the source code for my personal engineering portfolio, 
 
 ### 🎯 Key Highlights
 - **Institution**: VIT Chennai — B.Tech Computer Science Engineering (2024–2028)
-- **Academic Standing**: **8.30 / 10 CGPA**
 - **Domain Focus**: AI/ML, Software Engineering, Full-Stack Systems & Applied Data Science
 - **Honors**: 🏆 Winner — Ideathon (Quality Education) | 🏅 NPTEL Top 1% Performer
 
