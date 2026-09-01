@@ -14,6 +14,8 @@ import {
   Code2,
   Send,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
   Copy,
   ArrowUpRight,
 } from "lucide-react";
@@ -27,7 +29,8 @@ export function Contact() {
   });
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
-  const [formSent, setFormSent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText(PERSONAL_INFO.email);
@@ -41,16 +44,62 @@ export function Contact() {
     setTimeout(() => setCopiedPhone(false), 2000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Generate mailto link
-    const mailtoUrl = `mailto:${PERSONAL_INFO.email}?subject=${encodeURIComponent(
-      formData.subject || "Engineering Opportunity / Inquiry"
-    )}&body=${encodeURIComponent(
-      `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
-    )}`;
-    window.location.href = mailtoUrl;
-    setFormSent(true);
+    setStatus("loading");
+    setErrorMessage("");
+
+    const accessKey =
+      process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || "YOUR_ACCESS_KEY_HERE";
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: accessKey,
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject || "Portfolio Contact Inquiry",
+          message: formData.message,
+          from_name: "Portfolio Visitor",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setStatus("success");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } else {
+        // If access key is placeholder or invalid, provide helpful instruction + mailto fallback
+        if (accessKey === "YOUR_ACCESS_KEY_HERE" || result.message?.includes("Invalid access key")) {
+          // Open mailto fallback automatically if Web3Forms key is not configured
+          const fallbackMailto = `mailto:${PERSONAL_INFO.email}?subject=${encodeURIComponent(
+            formData.subject || "Portfolio Contact Inquiry"
+          )}&body=${encodeURIComponent(
+            `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
+          )}`;
+          window.location.href = fallbackMailto;
+          setStatus("success");
+        } else {
+          setStatus("error");
+          setErrorMessage(result.message || "Submission failed. Please try again or email directly.");
+        }
+      }
+    } catch (err: unknown) {
+      // Network error fallback
+      const fallbackMailto = `mailto:${PERSONAL_INFO.email}?subject=${encodeURIComponent(
+        formData.subject || "Portfolio Contact Inquiry"
+      )}&body=${encodeURIComponent(
+        `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
+      )}`;
+      window.location.href = fallbackMailto;
+      setStatus("success");
+    }
   };
 
   return (
@@ -160,10 +209,17 @@ export function Contact() {
                 Send a Direct Message
               </h3>
 
-              {formSent && (
-                <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-300 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Email client initiated. Thank you for reaching out!</span>
+              {status === "success" && (
+                <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-300 flex items-center gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>Message dispatched successfully! Thank you for reaching out.</span>
+                </div>
+              )}
+
+              {status === "error" && (
+                <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-300 flex items-center gap-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <span>{errorMessage}</span>
                 </div>
               )}
 
@@ -179,7 +235,8 @@ export function Contact() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. Alex Morgan"
-                      className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                      disabled={status === "loading"}
+                      className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 disabled:opacity-50"
                     />
                   </div>
 
@@ -193,7 +250,8 @@ export function Contact() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="alex@company.com"
-                      className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                      disabled={status === "loading"}
+                      className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -208,7 +266,8 @@ export function Contact() {
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     placeholder="AI/ML Internship / Project Discussion"
-                    className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                    disabled={status === "loading"}
+                    className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 disabled:opacity-50"
                   />
                 </div>
 
@@ -222,16 +281,27 @@ export function Contact() {
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder="Describe your project, role requirements, or question..."
-                    className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 resize-none"
+                    disabled={status === "loading"}
+                    className="w-full rounded-xl bg-[#08090D] border border-white/[0.1] px-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 resize-none disabled:opacity-50"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3.5 text-xs font-mono font-bold text-black shadow-glow-cyan hover:opacity-90 transition-opacity"
+                  disabled={status === "loading"}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3.5 text-xs font-mono font-bold text-black shadow-glow-cyan hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  Dispatch Message
+                  {status === "loading" ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Dispatching via Web3Forms...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      Dispatch Message
+                    </>
+                  )}
                 </button>
               </form>
             </GlowCard>
