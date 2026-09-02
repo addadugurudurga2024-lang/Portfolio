@@ -50,7 +50,7 @@ export function Contact() {
     setErrorMessage("");
 
     const accessKey =
-      process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || "YOUR_ACCESS_KEY_HERE";
+      process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || "ba0691be-4d01-4fb0-a736-f2a3df81e6ea";
 
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
